@@ -32,6 +32,12 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: snyk test --all-projects --severity-threshold=low --sarif-file-output=snyk-sca.sarif
+      - name: Fix SARIF null security-severity
+        if: always()
+        run: |
+          if [ -f snyk-sca.sarif ]; then
+            jq 'walk(if type == "object" and has("security-severity") and (."security-severity" == null) then del(."security-severity") else . end)' snyk-sca.sarif > snyk-sca.sarif.tmp && mv snyk-sca.sarif.tmp snyk-sca.sarif
+          fi
       - name: Upload Snyk Open Source SARIF
         uses: github/codeql-action/upload-sarif@v3
         if: always()
@@ -57,6 +63,12 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: snyk code test --severity-threshold=low --sarif-file-output=snyk-code.sarif
+      - name: Fix SARIF null security-severity
+        if: always()
+        run: |
+          if [ -f snyk-code.sarif ]; then
+            jq 'walk(if type == "object" and has("security-severity") and (."security-severity" == null) then del(."security-severity") else . end)' snyk-code.sarif > snyk-code.sarif.tmp && mv snyk-code.sarif.tmp snyk-code.sarif
+          fi
       - name: Upload Snyk Code SARIF
         uses: github/codeql-action/upload-sarif@v3
         if: always()
@@ -78,6 +90,12 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: snyk container test patch-mutual:${{ github.sha }} --file=Dockerfile --severity-threshold=low --sarif-file-output=snyk-container.sarif
+      - name: Fix SARIF null security-severity
+        if: always()
+        run: |
+          if [ -f snyk-container.sarif ]; then
+            jq 'walk(if type == "object" and has("security-severity") and (."security-severity" == null) then del(."security-severity") else . end)' snyk-container.sarif > snyk-container.sarif.tmp && mv snyk-container.sarif.tmp snyk-container.sarif
+          fi
       - name: Upload Snyk Container SARIF
         uses: github/codeql-action/upload-sarif@v3
         if: always()
@@ -97,6 +115,12 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: snyk iac test k8s-src --severity-threshold=low --sarif-file-output=snyk-iac.sarif
+      - name: Fix SARIF null security-severity
+        if: always()
+        run: |
+          if [ -f snyk-iac.sarif ]; then
+            jq 'walk(if type == "object" and has("security-severity") and (."security-severity" == null) then del(."security-severity") else . end)' snyk-iac.sarif > snyk-iac.sarif.tmp && mv snyk-iac.sarif.tmp snyk-iac.sarif
+          fi
       - name: Upload Snyk IaC SARIF
         uses: github/codeql-action/upload-sarif@v3
         if: always()
