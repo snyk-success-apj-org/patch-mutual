@@ -2,17 +2,18 @@ name: Snyk Security
 
 # Snyk static + dynamic security scanning for Patch Mutual (AltoroJ).
 # Required repository secrets:
-#   SNYK_TOKEN         - Snyk API token (Open Source, Code, Container, IaC)
-#   SNYK_API_WEB_TOKEN - Snyk API & Web (DAST) API token
+#   SNYK_TOKEN  - Snyk API token (Open Source, Code, Container, IaC)
+#   SNYK_APIWEB - Snyk API & Web (DAST) API token
 on:
   push:
-    branches: [ main ]
+    branches: [ '*' ]
   pull_request:
-    branches: [ main ]
+    branches: [ '*' ]
   workflow_dispatch:
 
 permissions:
   contents: read
+  security-events: write
 
 jobs:
   # 1. Snyk Open Source - scan Gradle dependencies (SCA)
@@ -30,7 +31,13 @@ jobs:
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        run: snyk test --all-projects --severity-threshold=high
+        run: snyk test --all-projects --severity-threshold=low --sarif-file-output=snyk-sca.sarif
+      - name: Upload Snyk Open Source SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: snyk-sca.sarif
+          category: snyk-open-source
       - name: Snyk monitor (snapshot to Snyk UI)
         if: github.ref == 'refs/heads/main'
         continue-on-error: true
@@ -49,7 +56,13 @@ jobs:
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        run: snyk code test --severity-threshold=high
+        run: snyk code test --severity-threshold=low --sarif-file-output=snyk-code.sarif
+      - name: Upload Snyk Code SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: snyk-code.sarif
+          category: snyk-code
 
   # 3. Snyk Container - build the image and scan it
   snyk-container:
@@ -64,7 +77,13 @@ jobs:
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        run: snyk container test patch-mutual:${{ github.sha }} --file=Dockerfile --severity-threshold=high
+        run: snyk container test patch-mutual:${{ github.sha }} --file=Dockerfile --severity-threshold=low --sarif-file-output=snyk-container.sarif
+      - name: Upload Snyk Container SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: snyk-container.sarif
+          category: snyk-container
 
   # 4. Snyk IaC - scan Kubernetes manifests
   snyk-iac:
@@ -77,7 +96,13 @@ jobs:
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        run: snyk iac test k8s-src --severity-threshold=high
+        run: snyk iac test k8s-src --severity-threshold=low --sarif-file-output=snyk-iac.sarif
+      - name: Upload Snyk IaC SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: snyk-iac.sarif
+          category: snyk-iac
 
   # 5. Snyk API & Web - trigger a DAST scan against the running app
   snyk-dast:
@@ -87,7 +112,7 @@ jobs:
     steps:
       - name: Trigger Snyk API & Web (DAST) scans
         env:
-          SNYK_API_WEB_TOKEN: ${{ secrets.SNYK_API_WEB_TOKEN }}
+          SNYK_APIWEB: ${{ secrets.SNYK_APIWEB }}
         run: |
           # Target IDs from Snyk API & Web (plus.probely.app):
           #   4EgdpNSGpGNR = PatchMutual (web)
@@ -96,6 +121,6 @@ jobs:
             echo "Starting Snyk API & Web (DAST) scan for target $TARGET"
             curl -sS -X POST \
               "https://api.probely.com/targets/$TARGET/scan_now/" \
-              -H "Authorization: JWT ${SNYK_API_WEB_TOKEN}" \
+              -H "Authorization: JWT ${SNYK_APIWEB}" \
               -H "Content-Type: application/json"
           done

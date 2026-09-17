@@ -6,9 +6,9 @@ This is a short guide on setting up your environment to run AltoroJ inside Eclip
 # 1. Download and install required components
 Here's what you'll need...
 - Eclipse Oxygen (4.7) - note whether you are downloading a 32-bit or 64-bit version
-- Java JDK 7 or later - ensure it is 64-bit if your OS and Eclipse are 64-bit)
+- Java JDK 11 (Temurin/AdoptOpenJDK recommended) - the project's Gradle wrapper (Gradle 6.5) requires JDK 8-14; newer JDKs (17+) will not work. Ensure it is 64-bit if your OS and Eclipse are 64-bit
 - The latest build of Apache Tomcat 7.x. Ensure you're downloading Tomcat 7 and not one of the newer versions as they have not been tested and may not work
-- Gradle 3.0 if you'd like to compile AltoroJ from command line
+- Gradle 6.5 if you'd like to compile AltoroJ from command line (the repo's `gradlew` wrapper will fetch this automatically - no separate install needed)
 
 Install Java first, then Tomcat, then Eclipse. Install Gradle any time.
 

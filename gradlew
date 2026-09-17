@@ -105,6 +105,31 @@ Please set the JAVA_HOME variable in your environment to match the
 location of your Java installation."
 fi
 
+# This project's Gradle wrapper is pinned to Gradle 6.5, which only supports JDK 8-14
+# (newer JDKs fail dependency resolution with "Unsupported class file major version").
+# Warn rather than fail, since this only affects local/interactive use.
+JAVA_VERSION_STRING=`"$JAVACMD" -version 2>&1 | head -n 1`
+JAVA_MAJOR_VERSION=`echo "$JAVA_VERSION_STRING" | sed -E 's/.*version "([0-9]+)(\.[0-9]+)?.*/\1/'`
+if [ -n "$JAVA_MAJOR_VERSION" ] && [ "$JAVA_MAJOR_VERSION" -eq "$JAVA_MAJOR_VERSION" ] 2>/dev/null ; then
+    if [ "$JAVA_MAJOR_VERSION" -eq 1 ] ; then
+        JAVA_MAJOR_VERSION=8 # old "1.8"-style version string == Java 8
+    fi
+    if [ "$JAVA_MAJOR_VERSION" -lt 8 -o "$JAVA_MAJOR_VERSION" -gt 14 ] ; then
+        warn "WARNING: Detected Java $JAVA_MAJOR_VERSION ($JAVACMD). This project's Gradle 6.5 wrapper requires JDK 8-14 (JDK 11 recommended). Example: export JAVA_HOME=~/.sdkman/candidates/java/11.0.31-tem"
+    fi
+fi
+
+# Auto-detect a corporate Zscaler TLS-interception truststore if present, so Gradle can
+# reach Maven Central without a manual GRADLE_OPTS export. No-op where the file doesn't
+# exist (e.g. CI runners) or where GRADLE_OPTS already sets a trustStore.
+ZSCALER_TRUSTSTORE="$HOME/.certs/ZscalerRootCA.jks"
+if [ -f "$ZSCALER_TRUSTSTORE" ]; then
+    case "$GRADLE_OPTS" in
+        *trustStore*) ;;
+        *) GRADLE_OPTS="$GRADLE_OPTS -Djavax.net.ssl.trustStore=$ZSCALER_TRUSTSTORE" ;;
+    esac
+fi
+
 # Increase the maximum file descriptors if we can.
 if [ "$cygwin" = "false" -a "$darwin" = "false" -a "$nonstop" = "false" ] ; then
     MAX_FD_LIMIT=`ulimit -H -n`
