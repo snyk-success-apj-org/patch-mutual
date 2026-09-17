@@ -36,7 +36,7 @@ jobs:
         if: always()
         run: |
           if [ -f snyk-sca.sarif ]; then
-            jq 'walk(if type == "object" and has("security-severity") and (."security-severity" == null) then del(."security-severity") else . end)' snyk-sca.sarif > snyk-sca.sarif.tmp && mv snyk-sca.sarif.tmp snyk-sca.sarif
+            jq 'walk(if type == "object" and has("security-severity") then (."security-severity" as $v | if ($v == null) or (($v|type) != "string") or (($v|test("^[0-9]+(\\.[0-9]+)?$")) | not) then del(."security-severity") else . end) else . end)' snyk-sca.sarif > snyk-sca.sarif.tmp && mv snyk-sca.sarif.tmp snyk-sca.sarif
           fi
       - name: Upload Snyk Open Source SARIF
         uses: github/codeql-action/upload-sarif@v3
@@ -67,7 +67,7 @@ jobs:
         if: always()
         run: |
           if [ -f snyk-code.sarif ]; then
-            jq 'walk(if type == "object" and has("security-severity") and (."security-severity" == null) then del(."security-severity") else . end)' snyk-code.sarif > snyk-code.sarif.tmp && mv snyk-code.sarif.tmp snyk-code.sarif
+            jq 'walk(if type == "object" and has("security-severity") then (."security-severity" as $v | if ($v == null) or (($v|type) != "string") or (($v|test("^[0-9]+(\\.[0-9]+)?$")) | not) then del(."security-severity") else . end) else . end)' snyk-code.sarif > snyk-code.sarif.tmp && mv snyk-code.sarif.tmp snyk-code.sarif
           fi
       - name: Upload Snyk Code SARIF
         uses: github/codeql-action/upload-sarif@v3
@@ -94,7 +94,7 @@ jobs:
         if: always()
         run: |
           if [ -f snyk-container.sarif ]; then
-            jq 'walk(if type == "object" and has("security-severity") and (."security-severity" == null) then del(."security-severity") else . end)' snyk-container.sarif > snyk-container.sarif.tmp && mv snyk-container.sarif.tmp snyk-container.sarif
+            jq 'walk(if type == "object" and has("security-severity") then (."security-severity" as $v | if ($v == null) or (($v|type) != "string") or (($v|test("^[0-9]+(\\.[0-9]+)?$")) | not) then del(."security-severity") else . end) else . end)' snyk-container.sarif > snyk-container.sarif.tmp && mv snyk-container.sarif.tmp snyk-container.sarif
           fi
       - name: Upload Snyk Container SARIF
         uses: github/codeql-action/upload-sarif@v3
@@ -119,7 +119,7 @@ jobs:
         if: always()
         run: |
           if [ -f snyk-iac.sarif ]; then
-            jq 'walk(if type == "object" and has("security-severity") and (."security-severity" == null) then del(."security-severity") else . end)' snyk-iac.sarif > snyk-iac.sarif.tmp && mv snyk-iac.sarif.tmp snyk-iac.sarif
+            jq 'walk(if type == "object" and has("security-severity") then (."security-severity" as $v | if ($v == null) or (($v|type) != "string") or (($v|test("^[0-9]+(\\.[0-9]+)?$")) | not) then del(."security-severity") else . end) else . end)' snyk-iac.sarif > snyk-iac.sarif.tmp && mv snyk-iac.sarif.tmp snyk-iac.sarif
           fi
       - name: Upload Snyk IaC SARIF
         uses: github/codeql-action/upload-sarif@v3
