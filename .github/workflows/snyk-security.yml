@@ -1,0 +1,101 @@
+name: Snyk Security
+
+# Snyk static + dynamic security scanning for Patch Mutual (AltoroJ).
+# Required repository secrets:
+#   SNYK_TOKEN         - Snyk API token (Open Source, Code, Container, IaC)
+#   SNYK_API_WEB_TOKEN - Snyk API & Web (DAST) API token
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # 1. Snyk Open Source - scan Gradle dependencies (SCA)
+  snyk-open-source:
+    name: Snyk Open Source (SCA)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+      - uses: snyk/actions/setup@master
+      - name: Snyk Open Source test
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk test --all-projects --severity-threshold=high
+      - name: Snyk monitor (snapshot to Snyk UI)
+        if: github.ref == 'refs/heads/main'
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk monitor --all-projects
+
+  # 2. Snyk Code - static application security testing (SAST)
+  snyk-code:
+    name: Snyk Code (SAST)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: snyk/actions/setup@master
+      - name: Snyk Code test
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk code test --severity-threshold=high
+
+  # 3. Snyk Container - build the image and scan it
+  snyk-container:
+    name: Snyk Container
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t patch-mutual:${{ github.sha }} .
+      - uses: snyk/actions/setup@master
+      - name: Snyk Container test
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk container test patch-mutual:${{ github.sha }} --file=Dockerfile --severity-threshold=high
+
+  # 4. Snyk IaC - scan Kubernetes manifests
+  snyk-iac:
+    name: Snyk IaC
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: snyk/actions/setup@master
+      - name: Snyk IaC test
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk iac test k8s-src --severity-threshold=high
+
+  # 5. Snyk API & Web - trigger a DAST scan against the running app
+  snyk-dast:
+    name: Snyk API & Web (DAST)
+    runs-on: ubuntu-latest
+    needs: [ snyk-code, snyk-container ]
+    steps:
+      - name: Trigger Snyk API & Web (DAST) scans
+        env:
+          SNYK_API_WEB_TOKEN: ${{ secrets.SNYK_API_WEB_TOKEN }}
+        run: |
+          # Target IDs from Snyk API & Web (plus.probely.app):
+          #   4EgdpNSGpGNR = PatchMutual (web)
+          #   p3ch73VytfAX = PatchMutual API (OpenAPI)
+          for TARGET in 4EgdpNSGpGNR p3ch73VytfAX; do
+            echo "Starting Snyk API & Web (DAST) scan for target $TARGET"
+            curl -sS -X POST \
+              "https://api.probely.com/targets/$TARGET/scan_now/" \
+              -H "Authorization: JWT ${SNYK_API_WEB_TOKEN}" \
+              -H "Content-Type: application/json"
+          done
